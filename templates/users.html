@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h3 class="mb-1">
+            <i class="fa fa-users me-2"></i>用户管理
+        </h3>
+        <p class="text-muted small mb-0">管理系统登录账号，共 {{ users|length }} 个用户</p>
+    </div>
+</div>
+
+<!-- 添加新用户 -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <i class="fa fa-user-plus text-success me-2"></i><strong>添加新用户</strong>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_add_user') }}">
+            {{ add_form.csrf_token }}
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">用户名 <span class="text-danger">*</span></label>
+                    {{ add_form.username(class='form-control form-control-sm', placeholder='登录用户名') }}
+                    <div class="form-text">字母/数字/下划线/中划线，3-50 位</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                    {{ add_form.fullname(class='form-control form-control-sm', placeholder='真实姓名') }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">初始密码 <span class="text-danger">*</span></label>
+                    {{ add_form.password(class='form-control form-control-sm', placeholder='至少 12 位，含字母和数字') }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">角色</label>
+                    {{ add_form.role(class='form-select form-select-sm') }}
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    {{ add_form.submit(class='btn btn-success btn-sm w-100') }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
+                    <small class="text-muted">
+                        <i class="fa fa-info-circle me-1"></i>新用户首次登录将被强制要求修改密码
+                    </small>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 用户列表 -->
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <i class="fa fa-list text-primary me-2"></i><strong>用户列表</strong>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">ID</th>
+                        <th>用户名</th>
+                        <th>姓名</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th class="text-center pe-3">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td class="ps-3">{{ user.id }}</td>
+                        <td><strong class="text-primary">{{ user.username }}</strong></td>
+                        <td>{{ user.fullname }}</td>
+                        <td>
+                            {% if user.role == 'admin' %}
+                                <span class="badge bg-danger"><i class="fa fa-star me-1"></i>管理员</span>
+                            {% else %}
+                                <span class="badge bg-secondary">普通用户</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.disabled %}
+                                <span class="badge bg-dark" title="无法登录">已禁用</span>
+                            {% elif user.must_change_password %}
+                                <span class="badge bg-warning text-dark" title="下次登录需修改密码">待改密</span>
+                            {% else %}
+                                <span class="badge bg-success">正常</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center pe-3">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary"
+                                        data-bs-toggle="modal" data-bs-target="#editModal"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        data-fullname="{{ user.fullname }}"
+                                        data-role="{{ user.role }}"
+                                        title="编辑">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-warning"
+                                        data-bs-toggle="modal" data-bs-target="#resetModal"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        title="重置密码">
+                                    <i class="fa fa-key"></i>
+                                </button>
+                                {% if user.id != current_user.id %}
+                                <button type="button" class="btn btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        title="删除">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% if user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('admin_toggle_disable', user_id=user.id) }}"
+                                  style="display:inline-block; margin-left:4px;"
+                                  onsubmit="return confirm('确认{{ '禁用' if not user.disabled else '启用' }}用户 {{ user.username }}？{% if not user.disabled %}禁用后该用户将无法登录。{% endif %}');">
+                                {{ confirm_form.csrf_token }}
+                                <button type="submit"
+                                        class="btn btn-sm {{ 'btn-outline-secondary' if not user.disabled else 'btn-outline-success' }}"
+                                        title="{{ '禁用' if not user.disabled else '启用' }}">
+                                    <i class="fa {{ 'fa-ban' if not user.disabled else 'fa-check-circle' }}"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑用户模态框 -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="editForm" action="">
+                {{ edit_form.csrf_token }}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-edit me-2"></i>编辑用户 <span id="editUsername" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">姓名</label>
+                        {{ edit_form.fullname(class='form-control', id='editFullname') }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">角色</label>
+                        {{ edit_form.role(class='form-select', id='editRole') }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    {{ edit_form.submit(class='btn btn-primary') }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 重置密码模态框 -->
+<div class="modal fade" id="resetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="resetForm" action="">
+                {{ reset_form.csrf_token }}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-key me-2 text-warning"></i>重置密码</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning small">
+                        <i class="fa fa-exclamation-triangle me-1"></i>
+                        将为 <strong id="resetUsername"></strong> 设置新密码，重置后该用户下次登录必须修改密码。
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">新密码</label>
+                        {{ reset_form.new_password(class='form-control', placeholder='至少 12 位，含字母和数字') }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    {{ reset_form.submit(class='btn btn-warning') }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="deleteForm" action="">
+                {{ confirm_form.csrf_token }}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-trash me-2 text-danger"></i>删除用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger small mb-0">
+                        <i class="fa fa-exclamation-triangle me-1"></i>
+                        确认删除用户 <strong id="deleteUsername"></strong>？此操作不可撤销。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 编辑模态框
+    document.getElementById('editModal').addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        var uid = btn.getAttribute('data-user-id');
+        document.getElementById('editUsername').textContent = btn.getAttribute('data-username');
+        document.getElementById('editFullname').value = btn.getAttribute('data-fullname');
+        document.getElementById('editRole').value = btn.getAttribute('data-role');
+        document.getElementById('editForm').action = '/admin/users/' + uid + '/edit';
+    });
+
+    // 重置密码模态框
+    document.getElementById('resetModal').addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        var uid = btn.getAttribute('data-user-id');
+        document.getElementById('resetUsername').textContent = btn.getAttribute('data-username');
+        document.getElementById('resetForm').action = '/admin/users/' + uid + '/reset-password';
+    });
+
+    // 删除模态框
+    document.getElementById('deleteModal').addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        var uid = btn.getAttribute('data-user-id');
+        document.getElementById('deleteUsername').textContent = btn.getAttribute('data-username');
+        document.getElementById('deleteForm').action = '/admin/users/' + uid + '/delete';
+    });
+});
+</script>
+{% endblock %}

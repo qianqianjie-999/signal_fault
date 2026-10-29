@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信号灯故障统计系统</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chartjs-plugin-datalabels.min.js') }}"></script>
+    <style>
+        /* 样式保持不变 */
+        :root {
+            --primary-color: #1e6dd0;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #e9ecef;
+            --header-bg: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            padding-bottom: 2rem;
+        }
+
+        .navbar {
+            background: var(--header-bg);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            color: var(--primary-color) !important;
+            font-weight: 600;
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            color: #0d4a9e !important;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 1.5rem;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--primary-color);
+        }
+
+        .card-title {
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-title i {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+            padding: 1rem;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card.level-1 { border-color: var(--danger-color); }
+        .stat-card.level-2 { border-color: var(--warning-color); }
+        .stat-card.level-3 { border-color: var(--info-color); }
+        .stat-card.level-4 { border-color: var(--success-color); }
+        .stat-card.level-5 { border-color: #9c27b0; }
+
+        .stat-card .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            color: var(--text-color);
+        }
+
+        .stat-card .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .stat-change {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            color: #28a745;
+        }
+
+        .stat-card .stat-change.negative {
+            color: var(--danger-color);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 2rem 0 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--primary-color);
+            display: inline-block;
+            color: var(--text-color);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .last-update {
+            background: rgba(30, 109, 208, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            display: inline-block;
+            color: var(--primary-color);
+        }
+
+        .grid-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .badge {
+            background: rgba(30, 109, 208, 0.1);
+            color: var(--primary-color);
+            font-weight: 500;
+            padding: 0.4rem 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 250px;
+            }
+
+            .stat-card .stat-value {
+                font-size: 2rem;
+            }
+
+            .grid-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .page-header {
+            margin: 1.5rem 0 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .system-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .system-title i {
+            color: var(--primary-color);
+        }
+
+        .nav-link-indicator {
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary-color);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .navbar-brand:hover .nav-link-indicator {
+            transform: scaleX(1);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand position-relative" href="{{ url_for('report') }}">
+                <i class="fa fa-lightbulb-o me-2"></i>
+                信号灯故障统计系统
+                <div class="nav-link-indicator"></div>
+            </a>
+            <div class="d-flex align-items-center">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" id="refreshBtn">
+                        <i class="fa fa-refresh me-1"></i>刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-2">
+        <div class="page-header">
+            <div class="system-title">
+                <i class="fa fa-line-chart"></i>
+                <span>信号灯故障统计大屏</span>
+            </div>
+            <p class="text-muted mb-0">实时监控系统故障状态，提供数据驱动的决策支持</p>
+        </div>
+
+        <!-- 顶部统计卡片 -->
+        <div class="stats-container">
+            {% if level_stats %}
+                {% for level, count in level_stats %}
+                <div class="stat-card level-{{ level }}">
+                    <div class="stat-label">{{ get_fault_level_display(level) }}</div>
+                    <div class="stat-value">{{ count }}</div>
+                    <div class="stat-change">
+                        <i class="fa fa-arrow-up me-1"></i>
+                        {% if loop.first %}{{ count - (level_stats[1][1] if level_stats|length > 1 else count) }}%{% else %}较上周变化{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 alert alert-info">暂无故障数据</div>
+            {% endif %}
+        </div>
+
+        <!-- 第一行图表 -->
+        <div class="grid-row">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-map-marker"></i>
+                        <span>区域故障分布</span>
+                    </div>
+                    <span class="badge">今日</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="regionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>故障等级分布</span>
+                    </div>
+                    <span class="badge">本月</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="levelChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-line-chart"></i>
+                        <span>月度故障趋势</span>
+                    </div>
+                    <span class="badge">近12月</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二行图表 -->
+        <div class="grid-row">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-road"></i>
+                        <span>路口故障TOP10</span>
+                    </div>
+                    <span class="badge">累计</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="junctionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-microchip"></i>
+                        <span>信号机编号故障TOP10</span>
+                    </div>
+                    <span class="badge">累计</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="signalChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第三行图表 -->
+        <div class="grid-row">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-user-circle"></i>
+                        <span>提交人统计</span>
+                    </div>
+                    <span class="badge">年度</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="reporterChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa fa-sitemap"></i>
+                        <span>项目统计</span>
+                    </div>
+                    <span class="badge">年度</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="projectChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部信息 -->
+        <div class="text-center mt-4">
+            <div class="last-update">
+                <i class="fa fa-refresh me-2"></i>最后更新: <span id="updateTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            信号灯故障统计系统 &copy; {{ current_year }} 智慧交通管理中心 | 数据驱动决策
+        </div>
+    </div>
+
+    <script>
+        // 注册数据标签插件
+        Chart.register(ChartDataLabels);
+
+        // 从Flask模板获取真实数据，并设置默认空数据防止图表报错
+        const realData = {
+            region: {
+                labels: {{ region_stats_labels | safe if region_stats_labels else "[]" }},
+                data: {{ region_stats_data | safe if region_stats_data else "[]" }}
+            },
+            level: {
+                labels: {{ level_stats_labels | safe if level_stats_labels else "[]" }},
+                data: {{ level_stats_data | safe if level_stats_data else "[]" }}
+            },
+            trend: {
+                labels: {{ monthly_stats_labels | safe if monthly_stats_labels else "[]" }},
+                data: {{ monthly_stats_data | safe if monthly_stats_data else "[]" }}
+            },
+            junction: {
+                labels: {{ junction_stats_labels | safe if junction_stats_labels else "[]" }},
+                data: {{ junction_stats_data | safe if junction_stats_data else "[]" }}
+            },
+            signal: {
+                labels: {{ signal_stats_labels | safe if signal_stats_labels else "[]" }},
+                data: {{ signal_stats_data | safe if signal_stats_data else "[]" }}
+            },
+            reporter: {
+                labels: {{ reporter_stats_labels | safe if reporter_stats_labels else "[]" }},
+                data: {{ reporter_stats_data | safe if reporter_stats_data else "[]" }}
+            },
+            project: {
+                labels: {{ project_stats_labels | safe if project_stats_labels else "[]" }},
+                data: {{ project_stats_data | safe if project_stats_data else "[]" }}
+            }
+        };
+
+        // 图表颜色配置
+        const colors = {
+            primary: 'rgba(30, 109, 208, 0.85)',
+            success: 'rgba(40, 167, 69, 0.85)',
+            warning: 'rgba(255, 193, 7, 0.85)',
+            danger: 'rgba(220, 53, 69, 0.85)',
+            info: 'rgba(23, 162, 184, 0.85)',
+            purple: 'rgba(111, 66, 193, 0.85)',
+            pink: 'rgba(214, 51, 132, 0.85)',
+            teal: 'rgba(32, 201, 151, 0.85)',
+            orange: 'rgba(253, 126, 20, 0.85)',
+            indigo: 'rgba(102, 16, 242, 0.85)'
+        };
+
+        // 初始化所有图表，并添加空数据处理
+        document.addEventListener('DOMContentLoaded', function() {
+            // 区域分布图
+            if (realData.region.labels.length > 0) {
+                new Chart(document.getElementById('regionChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: realData.region.labels,
+                        datasets: [{
+                            data: realData.region.data,
+                            backgroundColor: [
+                                colors.primary, colors.info, colors.success,
+                                colors.warning, colors.purple, colors.teal,
+                                colors.orange, colors.pink, colors.indigo, colors.danger
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right' },
+                            datalabels: {
+                                color: '#fff',
+                                font: { weight: 'bold', size: 10 },
+                                formatter: (value, ctx) => {
+                                    const total = ctx.chart.getDatasetMeta(0).total;
+                                    const percentage = Math.round((value / total) * 100);
+                                    return total > 0 ? `${percentage}%` : '';
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('regionChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无区域故障数据</div>';
+            }
+
+            // 故障等级分布图
+            if (realData.level.labels.length > 0 && realData.level.data.length > 0) {
+                new Chart(document.getElementById('levelChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: realData.level.labels,
+                        datasets: [{
+                            data: realData.level.data,
+                            backgroundColor: [
+                                colors.danger, colors.warning, colors.info,
+                                colors.success, colors.purple
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right' },
+                            datalabels: {
+                                color: '#fff',
+                                font: { weight: 'bold', size: 10 },
+                                formatter: (value, ctx) => {
+                                    const total = ctx.chart.getDatasetMeta(0).total;
+                                    const percentage = Math.round((value / total) * 100);
+                                    return total > 0 ? `${percentage}%` : '';
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('levelChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无故障等级数据</div>';
+            }
+
+            // 月度趋势图
+            if (realData.trend.labels.length > 0) {
+                new Chart(document.getElementById('trendChart'), {
+                    type: 'line',
+                    data: {
+                        labels: realData.trend.labels,
+                        datasets: [{
+                            label: '故障数量',
+                            data: realData.trend.data,
+                            backgroundColor: 'rgba(30, 109, 208, 0.1)',
+                            borderColor: colors.primary,
+                            borderWidth: 3,
+                            pointBackgroundColor: colors.primary,
+                            pointBorderColor: '#fff',
+                            pointRadius: 4,
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: 'rgba(0, 0, 0, 0.05)' } },
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('trendChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无月度趋势数据</div>';
+            }
+
+            // 路口故障TOP10
+            if (realData.junction.labels.length > 0) {
+                new Chart(document.getElementById('junctionChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: realData.junction.labels,
+                        datasets: [{
+                            label: '故障数量',
+                            data: realData.junction.data,
+                            backgroundColor: colors.primary,
+                            borderWidth: 0,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'right',
+                                color: '#fff',
+                                font: { weight: 'bold', size: 11 }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('junctionChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无路口故障数据</div>';
+            }
+
+            // 信号机故障TOP10
+            if (realData.signal.labels.length > 0) {
+                new Chart(document.getElementById('signalChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: realData.signal.labels,
+                        datasets: [{
+                            label: '故障数量',
+                            data: realData.signal.data,
+                            backgroundColor: colors.info,
+                            borderWidth: 0,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                color: '#fff',
+                                font: { weight: 'bold', size: 11 }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('signalChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无信号机故障数据</div>';
+            }
+
+            // 提交人统计
+            if (realData.reporter.labels.length > 0) {
+                new Chart(document.getElementById('reporterChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: realData.reporter.labels,
+                        datasets: [{
+                            label: '提交数量',
+                            data: realData.reporter.data,
+                            backgroundColor: colors.success,
+                            borderWidth: 0,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'right',
+                                color: '#fff',
+                                font: { weight: 'bold', size: 11 }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('reporterChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无提交人数据</div>';
+            }
+
+            // 项目统计
+            if (realData.project.labels.length > 0) {
+                new Chart(document.getElementById('projectChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: realData.project.labels,
+                        datasets: [{
+                            label: '故障数量',
+                            data: realData.project.data,
+                            backgroundColor: colors.purple,
+                            borderWidth: 0,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                color: '#fff',
+                                font: { weight: 'bold', size: 11 }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('projectChart').parentElement.innerHTML =
+                    '<div class="text-center py-5 text-muted">暂无项目数据</div>';
+            }
+
+            // 更新时间显示
+            function updateDateTime() {
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+                const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                document.getElementById('updateTime').textContent = `${dateStr} ${timeStr}`;
+            }
+
+            // 初始更新
+            updateDateTime();
+
+            // 每分钟更新一次时间
+            setInterval(updateDateTime, 60000);
+
+            // 刷新按钮事件
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                const spinner = document.createElement('i');
+                spinner.className = 'fa fa-spinner fa-spin me-1';
+                this.innerHTML = '';
+                this.appendChild(spinner);
+                this.appendChild(document.createTextNode('刷新中...'));
+
+                // 模拟刷新（实际应重新加载页面或数据）
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>

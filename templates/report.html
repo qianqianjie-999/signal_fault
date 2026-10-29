@@ -1,0 +1,149 @@
+{#{% extends "base.html" %}#}
+{##}
+{#{% block content %}#}
+{#<h2 class="mb-4">故障信息上报</h2>#}
+{#<div class="card">#}
+{#    <div class="card-body">#}
+{#        <form method="POST">#}
+{#            {{ form.hidden_tag() }}#}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.region.label(class="form-label") }}#}
+{#                    {{ form.region(class="form-select") }}#}
+{#                </div>#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.junction.label(class="form-label") }}#}
+{#                    {{ form.junction(class="form-control", placeholder="请输入路口名称") }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.project.label(class="form-label") }}#}
+{#                    {{ form.project(class="form-control", placeholder="请输入项目名称") }}#}
+{#                </div>#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.signal_id.label(class="form-label") }}#}
+{#                    {{ form.signal_id(class="form-control", placeholder="请输入信号机编号") }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.signal_version.label(class="form-label") }}#}
+{#                    {{ form.signal_version(class="form-control", placeholder="请输入信号机程序版本") }}#}
+{#                </div>#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.fault_time.label(class="form-label") }}#}
+{#                    {{ form.fault_time(class="form-control", placeholder="格式：YYYY-MM-DD HH:MM") }}#}
+{#                    <small class="form-text text-muted">例如：2023-08-15 14:30</small>#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.fault_level.label(class="form-label") }}#}
+{#                    {{ form.fault_level(class="form-select") }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="mb-3">#}
+{#                {{ form.fault_phenomenon.label(class="form-label") }}#}
+{#                {{ form.fault_phenomenon(class="form-control", rows=3, placeholder="请详细描述故障日志及现场现象") }}#}
+{#            </div>#}
+{##}
+{#            <div class="mb-3">#}
+{#                {{ form.solution.label(class="form-label") }}#}
+{#                {{ form.solution(class="form-control", rows=3, placeholder="请描述现场处理办法") }}#}
+{#            </div>#}
+{##}
+{#            <div class="d-grid">#}
+{#                {{ form.submit(class="btn btn-primary btn-lg") }}#}
+{#            </div>#}
+{#        </form>#}
+{#    </div>#}
+{#</div>#}
+{#{% endblock %}#}
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">故障信息上报</h2>
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.region.label(class="form-label") }}
+                    {{ form.region(class="form-select") }}
+                </div>
+                    <div class="col-md-6">
+                        {{ form.junction.label(class="form-label") }}
+                        {{ form.junction(class="form-control", placeholder="格式：东西路名-南北路名 例：太白路-火炬路 或 G105-S324") }}
+                        {% if form.junction.errors %}
+                        <div class="alert alert-danger mt-2">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        {{ form.junction.errors[0] }}
+                   	 </div>
+                    {% endif %}
+                    <small class="form-text text-muted">请按"东西方向路名-南北方向路名"格式输入</small>
+                </div>
+            </div>
+	    <div class="row mb-3>
+		    <div class="col-md-6">
+                    {{ form.project.label(class="form-label") }}
+                    {{ form.project(class="col-md-6", placeholder="请输入项目名称") }}
+                    </div>
+                    <div class="col-md-6">
+                    {{ form.signal_id.label(class="form-label") }}
+        	    {{ form.signal_id(class="form-control", placeholder="格式：KWD02A-1234-5678-V1 或 -V2") }}
+        	    {% if form.signal_id.errors %}
+                  	 <div class="alert alert-danger mt-2">
+                	<i class="bi bi-exclamation-triangle"></i>
+                	{{ form.signal_id.errors[0] }}
+            	 	 </div>
+        		{% endif %}
+               		<small class="form-text text-muted">
+            		一代机格式：KWD02A-四位数字-四位数字-V1<br>
+            		二代机格式：KWD02A-四位数字-四位数字-V2
+        		</small>
+                  </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    {{ form.signal_version.label(class="form-label") }}
+                    {{ form.signal_version(class="form-control", placeholder="请输入信号机程序版本") }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.fault_time.label(class="form-label") }}
+                    {{ form.fault_time(class="form-control", placeholder="格式：YYYY-MM-DD HH:MM") }}
+                    <small class="form-text text-muted">例如：2023-08-15 14:30</small>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.fault_level.label(class="form-label") }}
+                    {{ form.fault_level(class="form-select") }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                {{ form.fault_phenomenon.label(class="form-label") }}
+                {{ form.fault_phenomenon(class="form-control", rows=3, placeholder="请详细描述故障日志及现场现象") }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.solution.label(class="form-label") }}
+                {{ form.solution(class="form-control", rows=3, placeholder="请描述现场处理办法") }}
+            </div>
+
+            <div class="d-grid">
+                {{ form.submit(class="btn btn-primary btn-lg") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">故障统计报表</h2>
+
+<!-- 加载状态指示器 -->
+<div id="loadingIndicator" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">加载中...</span>
+    </div>
+    <p class="mt-3">正在加载统计数据，请稍候...</p>
+</div>
+
+<!-- 图表容器 - 初始隐藏 -->
+<div id="chartsContainer" style="display:none;">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按区域分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="regionChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按故障等级分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="levelChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按路口分布 (TOP 10)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="junctionChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按信号机编号排序 (TOP 10)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="signalChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按月故障趋势 (最近12个月)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按提交人统计 (TOP 10)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="reporterChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">按项目统计 (TOP 10)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="projectChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 检查 Chart.js 是否加载成功
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js 未加载！');
+        document.getElementById('loadingIndicator').innerHTML = `
+            <div class="alert alert-danger">
+                <h5>图表库加载失败</h5>
+                <p>请检查网络连接或联系管理员。</p>
+                <button class="btn btn-primary" onclick="location.reload()">重新加载</button>
+            </div>
+        `;
+        return;
+    }
+
+    // 注册数据标签插件
+    Chart.register(ChartDataLabels);
+
+    // 通用图表配置
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    boxWidth: 12,
+                    padding: 15
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw;
+                        const total = context.chart.getDatasetMeta(0).total;
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            },
+            datalabels: {
+                anchor: 'center',
+                align: 'center',
+                formatter: function(value, context) {
+                    return value; // 默认只显示数值
+                },
+                font: {
+                    weight: 'bold',
+                    size: 12
+                },
+                color: '#fff'
+            }
+        }
+    };
+
+    // 添加延时确保DOM完全渲染
+    setTimeout(function() {
+        try {
+            // 区域图表 - 饼图
+            if (document.getElementById('regionChart')) {
+                const regionCtx = document.getElementById('regionChart').getContext('2d');
+                const regionTotal = {{ chart_data.region.data | sum | tojson }};
+
+                new Chart(regionCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: {{ chart_data.region.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.region.data | tojson }},
+                            backgroundColor: [
+                                '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+                                '#858796', '#5a5c69', '#3a3b45', '#2e59d9', '#17a673'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        plugins: {
+                            ...chartOptions.plugins,
+                            datalabels: {
+                                ...chartOptions.plugins.datalabels,
+                                formatter: function(value) {
+                                    const percentage = regionTotal > 0 ? ((value / regionTotal) * 100).toFixed(1) : 0;
+                                    return `${value}\n(${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 故障等级图表 - 环形图
+            if (document.getElementById('levelChart')) {
+                const levelCtx = document.getElementById('levelChart').getContext('2d');
+                const levelTotal = {{ chart_data.level.data | sum | tojson }};
+
+                new Chart(levelCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: {{ chart_data.level.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.level.data | tojson }},
+                            backgroundColor: [
+                                '#e74a3b', '#f6c23e', '#36b9cc', '#4e73df', '#1cc88a'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        plugins: {
+                            ...chartOptions.plugins,
+                            datalabels: {
+                                ...chartOptions.plugins.datalabels,
+                                formatter: function(value) {
+                                    const percentage = levelTotal > 0 ? ((value / levelTotal) * 100).toFixed(1) : 0;
+                                    return `${value}\n(${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 路口图表 - 柱状图
+            if (document.getElementById('junctionChart')) {
+                new Chart(document.getElementById('junctionChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: {{ chart_data.junction.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.junction.data | tojson }},
+                            backgroundColor: '#4e73df',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: chartOptions.plugins.tooltip,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: function(value) {
+                                    return value;
+                                },
+                                font: {
+                                    weight: 'bold',
+                                    size: 11
+                                },
+                                color: '#333'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 信号机图表 - 柱状图
+            if (document.getElementById('signalChart')) {
+                new Chart(document.getElementById('signalChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: {{ chart_data.signal.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.signal.data | tojson }},
+                            backgroundColor: '#1cc88a',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: chartOptions.plugins.tooltip,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: function(value) {
+                                    return value;
+                                },
+                                font: {
+                                    weight: 'bold',
+                                    size: 11
+                                },
+                                color: '#333'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 月度趋势图表 - 折线图
+            if (document.getElementById('monthlyChart')) {
+                new Chart(document.getElementById('monthlyChart'), {
+                    type: 'line',
+                    data: {
+                        labels: {{ chart_data.monthly.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.monthly.data | tojson }},
+                            backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                            borderColor: '#4e73df',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#4e73df',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#4e73df',
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: chartOptions.plugins.tooltip,
+                            datalabels: {
+                                display: false // 折线图上不显示数据标签
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 提交人图表 - 横向柱状图
+            if (document.getElementById('reporterChart')) {
+                new Chart(document.getElementById('reporterChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: {{ chart_data.reporter.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.reporter.data | tojson }},
+                            backgroundColor: '#36b9cc',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: chartOptions.plugins.tooltip,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'right',
+                                formatter: function(value) {
+                                    return value;
+                                },
+                                font: {
+                                    weight: 'bold',
+                                    size: 11
+                                },
+                                color: '#333'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 项目图表 - 柱状图
+            if (document.getElementById('projectChart')) {
+                new Chart(document.getElementById('projectChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: {{ chart_data.project.labels | tojson }},
+                        datasets: [{
+                            label: '故障数量',
+                            data: {{ chart_data.project.data | tojson }},
+                            backgroundColor: '#f6c23e',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: chartOptions.plugins.tooltip,
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: function(value) {
+                                    return value;
+                                },
+                                font: {
+                                    weight: 'bold',
+                                    size: 11
+                                },
+                                color: '#333'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 显示图表容器
+            document.getElementById('chartsContainer').style.display = 'block';
+            // 隐藏加载指示器
+            document.getElementById('loadingIndicator').style.display = 'none';
+
+        } catch (e) {
+            console.error("图表初始化错误:", e);
+            // 错误处理
+            document.getElementById('loadingIndicator').innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>图表加载失败</h5>
+                    <p>${e.message}</p>
+                    <button class="btn btn-primary" onclick="location.reload()">重新加载</button>
+                </div>
+            `;
+        }
+    }, 500);
+});
+</script>
+{% endblock %}

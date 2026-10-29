@@ -1,0 +1,429 @@
+{#{% extends "base.html" %}#}
+{##}
+{#{% block content %}#}
+{#<h2 class="mb-4">故障信息查询</h2>#}
+{#<div class="card mb-4">#}
+{#    <div class="card-body">#}
+{#        <form method="GET" action="{{ url_for('query') }}">#}
+{#            {{ form.hidden_tag() }}#}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.region.label(class="form-label") }}#}
+{#                    {{ form.region(class="form-select") }}#}
+{#                    <script>#}
+{#                        document.addEventListener('DOMContentLoaded', function() {#}
+{#                            const region = "{{ request.args.get('region', '') }}";#}
+{#                            if (region) {#}
+{#                                document.querySelector('select[name="region"]').value = region;#}
+{#                            }#}
+{#                        });#}
+{#                    </script>#}
+{#                </div>#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.junction.label(class="form-label") }}#}
+{#                    {{ form.junction(class="form-control", placeholder="路口名称", value=request.args.get('junction', '')) }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.project.label(class="form-label") }}#}
+{#                    {{ form.project(class="form-control", placeholder="项目名称", value=request.args.get('project', '')) }}#}
+{#                </div>#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.signal_id.label(class="form-label") }}#}
+{#                    {{ form.signal_id(class="form-control", placeholder="信号机编号", value=request.args.get('signal_id', '')) }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.signal_version.label(class="form-label") }}#}
+{#                    {{ form.signal_version(class="form-control", placeholder="信号机程序版本", value=request.args.get('signal_version', '')) }}#}
+{#                </div>#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.reporter.label(class="form-label") }}#}
+{#                    {{ form.reporter(class="form-control", placeholder="提交人", value=request.args.get('reporter', '')) }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="row mb-3">#}
+{#                <div class="col-md-6">#}
+{#                    {{ form.fault_level.label(class="form-label") }}#}
+{#                    {{ form.fault_level(class="form-select") }}#}
+{#                    <script>#}
+{#                        document.addEventListener('DOMContentLoaded', function() {#}
+{#                            const faultLevel = "{{ request.args.get('fault_level', '') }}";#}
+{#                            if (faultLevel) {#}
+{#                                document.querySelector('select[name="fault_level"]').value = faultLevel;#}
+{#                            }#}
+{#                        });#}
+{#                    </script>#}
+{#                </div>#}
+{#                <div class="col-md-3">#}
+{#                    {{ form.start_date.label(class="form-label") }}#}
+{#                    {{ form.start_date(class="form-control", placeholder="YYYY-MM-DD", value=request.args.get('start_date', '')) }}#}
+{#                </div>#}
+{#                <div class="col-md-3">#}
+{#                    {{ form.end_date.label(class="form-label") }}#}
+{#                    {{ form.end_date(class="form-control", placeholder="YYYY-MM-DD", value=request.args.get('end_date', '')) }}#}
+{#                </div>#}
+{#            </div>#}
+{##}
+{#            <div class="d-grid gap-2 d-md-flex justify-content-md-end">#}
+{#                <button type="submit" name="export" value="true" class="btn btn-success me-md-2">#}
+{#                    <i class="bi bi-download"></i> 导出CSV#}
+{#                </button>#}
+{#                {{ form.submit(class="btn btn-primary") }}#}
+{#            </div>#}
+{#        </form>#}
+{#    </div>#}
+{#</div>#}
+{##}
+{#{% if results.items %}#}
+{#<div class="card">#}
+{#    <div class="card-header bg-light">#}
+{#        <h5 class="mb-0">查询结果 (共 {{ results.total }} 条记录)</h5>#}
+{#    </div>#}
+{#    <div class="card-body">#}
+{#        <div class="table-responsive">#}
+{#            <table class="table table-hover">#}
+{#                <thead class="table-light">#}
+{#                    <tr>#}
+{#                        <th>序号</th>#}
+{#                        <th>区域</th>#}
+{#                        <th>路口名称</th>#}
+{#                        <th>项目名称</th>#}
+{#                        <th>信号机编号</th>#}
+{#                        <th>信号机程序版本</th>#}
+{#                        <th>故障发生时间</th>#}
+{#                        <th>故障日志及现场现象</th>#}
+{#                        <th>现场处理办法</th>#}
+{#                        <th>故障等级</th>#}
+{#                        <th>提交人</th>#}
+{#                        <th>提交时间</th>#}
+{#                    </tr>#}
+{#                </thead>#}
+{#                <tbody>#}
+{#                    {% for report in results.items %}#}
+{#                    <tr>#}
+{#                        <td>{{ (results.page - 1) * results.per_page + loop.index }}</td>#}
+{#                        <td>{{ report.region }}</td>#}
+{#                        <td>{{ report.junction }}</td>#}
+{#                        <td>{{ report.project }}</td>#}
+{#                        <td>{{ report.signal_id }}</td>#}
+{#                        <td>{{ report.signal_version }}</td>#}
+{#                        <td>{{ report.fault_time.strftime('%Y-%m-%d %H:%M') }}</td>#}
+{#                        <td>{{ report.fault_phenomenon|truncate(30) }}</td>#}
+{#                        <td>{{ report.solution|truncate(30) }}</td>#}
+{#                        <td>#}
+{#                            {% if report.fault_level == '5' %}#}
+{#                                <span class="badge bg-danger">5级 信号机软硬件故障</span>#}
+{#                            {% elif report.fault_level == '4' %}#}
+{#                                <span class="badge bg-warning text-dark">4级 信号机软件故障</span>#}
+{#                            {% elif report.fault_level == '3' %}#}
+{#                                <span class="badge bg-primary">3级 信号机硬件故障</span>#}
+{#                            {% elif report.fault_level == '2' %}#}
+{#                                <span class="badge bg-info">2级 灯具故障</span>#}
+{#                            {% elif report.fault_level == '1' %}#}
+{#                                <span class="badge bg-secondary">1级 线路故障</span>#}
+{#                            {% else %}#}
+{#                                <span class="badge bg-light text-dark">未知等级</span>#}
+{#                            {% endif %}#}
+{#                        </td>#}
+{#                        <td>{{ report.reporter }}</td>#}
+{#                        <td>{{ report.report_time.strftime('%Y-%m-%d %H:%M') }}</td>#}
+{#                    </tr>#}
+{#                    {% endfor %}#}
+{#                </tbody>#}
+{#            </table>#}
+{#        </div>#}
+{##}
+{#        <!-- 分页导航 -->#}
+{#        <!-- 分页导航 -->#}
+{#        <nav aria-label="分页导航">#}
+{#            <ul class="pagination justify-content-center">#}
+{#                <!-- 上一页按钮 -->#}
+{#                <li class="page-item {% if not results.has_prev %}disabled{% endif %}">#}
+{#                    <a class="page-link"#}
+{#                       href="{{ url_for('query', page=results.prev_num, **url_args) }}">#}
+{#                        上一页#}
+{#                    </a>#}
+{#                </li>#}
+{##}
+{#                <!-- 页码 -->#}
+{#                {% for page_num in results.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}#}
+{#                    {% if page_num %}#}
+{#                        <li class="page-item {% if page_num == results.page %}active{% endif %}">#}
+{#                            <a class="page-link"#}
+{#                               href="{{ url_for('query', page=page_num, **url_args) }}">#}
+{#                                {{ page_num }}#}
+{#                            </a>#}
+{#                        </li>#}
+{#                    {% else %}#}
+{#                        <li class="page-item disabled">#}
+{#                            <span class="page-link">...</span>#}
+{#                        </li>#}
+{#                    {% endif %}#}
+{#                {% endfor %}#}
+{##}
+{#                <!-- 下一页按钮 -->#}
+{#                <li class="page-item {% if not results.has_next %}disabled{% endif %}">#}
+{#                    <a class="page-link"#}
+{#                       href="{{ url_for('query', page=results.next_num, **url_args) }}">#}
+{#                        下一页#}
+{#                    </a>#}
+{#                </li>#}
+{#            </ul>#}
+{#        </nav>#}
+{#    </div>#}
+{#</div>#}
+{#{% endif %}#}
+{#{% endblock %}#}
+{##}
+{##}
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">故障信息查询</h2>
+
+<!-- 加载指示器 -->
+<div id="loadingIndicator" class="text-center py-3" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">加载中...</span>
+    </div>
+    <p class="mt-2">正在查询数据，请稍候...</p>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <!-- 修改表单添加 onsubmit 事件 -->
+        <form method="GET" action="{{ url_for('query') }}" onsubmit="showLoading()">
+            {{ form.hidden_tag() }}
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.region.label(class="form-label") }}
+                    {{ form.region(class="form-select") }}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const region = "{{ request.args.get('region', '') }}";
+                            if (region) {
+                                document.querySelector('select[name="region"]').value = region;
+                            }
+                        });
+                    </script>
+                </div>
+                <div class="col-md-6">
+                    {{ form.junction.label(class="form-label") }}
+                    {{ form.junction(class="form-control", placeholder="路口名称", value=request.args.get('junction', '')) }}
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.project.label(class="form-label") }}
+                    {{ form.project(class="form-control", placeholder="项目名称", value=request.args.get('project', '')) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.signal_id.label(class="form-label") }}
+                    {{ form.signal_id(class="form-control", placeholder="信号机编号", value=request.args.get('signal_id', '')) }}
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.signal_version.label(class="form-label") }}
+                    {{ form.signal_version(class="form-control", placeholder="信号机程序版本", value=request.args.get('signal_version', '')) }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.reporter.label(class="form-label") }}
+                    {{ form.reporter(class="form-control", placeholder="提交人", value=request.args.get('reporter', '')) }}
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    {{ form.fault_level.label(class="form-label") }}
+                    {{ form.fault_level(class="form-select") }}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const faultLevel = "{{ request.args.get('fault_level', '') }}";
+                            if (faultLevel) {
+                                document.querySelector('select[name="fault_level"]').value = faultLevel;
+                            }
+                        });
+                    </script>
+                </div>
+                <div class="col-md-3">
+                    {{ form.start_date.label(class="form-label") }}
+                    {{ form.start_date(class="form-control", placeholder="YYYY-MM-DD", value=request.args.get('start_date', '')) }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.end_date.label(class="form-label") }}
+                    {{ form.end_date(class="form-control", placeholder="YYYY-MM-DD", value=request.args.get('end_date', '')) }}
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" name="export" value="true" class="btn btn-success me-md-2">
+                    <i class="bi bi-download"></i> 导出CSV
+                </button>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if results.items %}
+<!-- 给结果区域添加ID以便控制显示 -->
+<div id="resultsTable">
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">查询结果 (共 {{ results.total }} 条记录)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>序号</th>
+                            <th>区域</th>
+                            <th>路口名称</th>
+                            <th>项目名称</th>
+                            <th>信号机编号</th>
+                            <th>信号机程序版本</th>
+                            <th>故障发生时间</th>
+                            <th>故障日志及现场现象</th>
+                            <th>现场处理办法</th>
+                            <th>故障等级</th>
+                            <th>提交人</th>
+                            <th>提交时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in results.items %}
+                        <tr>
+                            <td>{{ (results.page - 1) * results.per_page + loop.index }}</td>
+                            <td>{{ report.region }}</td>
+                            <td>{{ report.junction }}</td>
+                            <td>{{ report.project }}</td>
+                            <td>{{ report.signal_id }}</td>
+                            <td>{{ report.signal_version }}</td>
+                            <td>{{ report.fault_time.strftime('%Y-%m-%d %H:%M') }}</td>
+			    <td>
+				    <span class="truncated-text" 
+                      			  data-bs-toggle="tooltip" 
+                      			  data-bs-placement="top" 
+                      			  title="{{ report.fault_phenomenon }}">{{ report.fault_phenomenon|truncate(30) }}
+                		   </span>
+				    
+			    <td>
+				    <span class="truncated-text"
+                      			  data-bs-toggle="tooltip"
+                      			  data-bs-placement="top"
+                      			  title="{{ report.solution }}">{{ report.solution|truncate(30) }}
+                		   </span>
+				   
+                            <td>
+                                {% if report.fault_level == '5' %}
+                                    <span class="badge bg-danger">5级 信号机软硬件故障</span>
+                                {% elif report.fault_level == '4' %}
+                                    <span class="badge bg-warning text-dark">4级 信号机软件故障</span>
+                                {% elif report.fault_level == '3' %}
+                                    <span class="badge bg-primary">3级 信号机硬件故障</span>
+                                {% elif report.fault_level == '2' %}
+                                    <span class="badge bg-info">2级 灯具故障</span>
+                                {% elif report.fault_level == '1' %}
+                                    <span class="badge bg-secondary">1级 线路故障</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">未知等级</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ report.reporter }}</td>
+                            <td>{{ report.report_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页导航 -->
+            <nav aria-label="分页导航">
+                <ul class="pagination justify-content-center">
+                    <!-- 上一页按钮 -->
+                    <li class="page-item {% if not results.has_prev %}disabled{% endif %}">
+                        <a class="page-link"
+                           href="{{ url_for('query', page=results.prev_num, **url_args) }}"
+                           onclick="showLoading()">
+                            上一页
+                        </a>
+                    </li>
+
+                    <!-- 页码 -->
+                    {% for page_num in results.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == results.page %}active{% endif %}">
+                                <a class="page-link"
+                                   href="{{ url_for('query', page=page_num, **url_args) }}"
+                                   onclick="showLoading()">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- 下一页按钮 -->
+                    <li class="page-item {% if not results.has_next %}disabled{% endif %}">
+                        <a class="page-link"
+                           href="{{ url_for('query', page=results.next_num, **url_args) }}"
+                           onclick="showLoading()">
+                            下一页
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+	// 初始化所有工具提示
+    document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+// 显示加载指示器的函数
+function showLoading() {
+    // 显示加载指示器
+    document.getElementById('loadingIndicator').style.display = 'block';
+
+    // 隐藏结果表格（如果存在）
+    const resultsTable = document.getElementById('resultsTable');
+    if (resultsTable) {
+        resultsTable.style.display = 'none';
+    }
+}
+
+// 为分页链接添加点击事件
+document.querySelectorAll('.page-link').forEach(link => {
+    link.addEventListener('click', function() {
+        showLoading();
+    });
+});
+
+// 页面加载完成后恢复显示结果区域
+document.addEventListener('DOMContentLoaded', function() {
+    const resultsTable = document.getElementById('resultsTable');
+    if (resultsTable) {
+        resultsTable.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

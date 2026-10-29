@@ -1,0 +1,73 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.badge {
+    font-weight: normal;
+}
+
+.table th {
+    background-color: #f1f5f9;
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+.alert {
+    border-radius: 8px;
+}
+
+footer {
+    margin-top: 40px;
+}
+
+/* 图表容器样式 */
+.card-body canvas {
+    max-height: 300px;
+    width: 100% !important;
+}
+
+/* 统计卡片样式 */
+.stat-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-card-header {
+    border-radius: 10px 10px 0 0 !important;
+    padding: 15px 20px;
+    font-weight: 600;
+}
+
+.stat-card-body {
+    padding: 20px;
+}
+
